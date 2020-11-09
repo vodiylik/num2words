@@ -20,7 +20,7 @@ from __future__ import division, print_function, unicode_literals
 from . import lang_EU
 
 
-class Num2Word_SE(lang_EU.Num2Word_EU):
+class Num2Word_SV(lang_EU.Num2Word_EU):
     GIGA_SUFFIX = "illard"
     MEGA_SUFFIX = "illion"
 
@@ -35,7 +35,7 @@ class Num2Word_SE(lang_EU.Num2Word_EU):
                 self.cards[10 ** (n - 3)] = word + self.MEGA_SUFFIX
 
     def setup(self):
-        super(Num2Word_SE, self).setup()
+        super(Num2Word_SV, self).setup()
 
         self.negword = "minus "
         self.pointword = "komma"
