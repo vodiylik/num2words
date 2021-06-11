@@ -163,8 +163,13 @@ class Num2Word_SW(object):
         return " ".join(words)
 
     def to_year(self, value):
-        raise NotImplementedError()
-        # return self.to_cardinal(value)
+        value_str = str(value)
+        if len(value_str) != 4:
+            return self.to_cardinal(value)
+
+        first_num, second_num = int(value_str[:2]), int(value_str[2:])
+        words = [self.to_cardinal(first_num), self.to_cardinal(second_num)]
+        return " ".join(words)
 
     def to_ordinal_num(self, value):
         raise NotImplementedError()
