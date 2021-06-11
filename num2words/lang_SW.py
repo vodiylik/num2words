@@ -22,7 +22,7 @@ from decimal import Decimal
 from math import floor, log10
 
 swOnes = [
-    "",
+    "sifuri",  # 0
     "moja",  # 1
     "mbili",  # 2
     "tatu",  # 3
@@ -60,15 +60,14 @@ swBig = [
     "bilioni",  # 1e9
 ]
 
-swSeperator = " na "
+swSeparator = "na"
+swOrdinal = "wa"
+swDecimalPoint = "nukta"
 
 
 class Num2Word_SW(object):
     errmsg_too_big = "Too large"
     max_num = 10 ** 36
-
-    def __init__(self):
-        self.number = 0
 
     def float2tuple(self, value):
         pre = int(value)
@@ -88,54 +87,80 @@ class Num2Word_SW(object):
 
         return pre, post, self.precision
 
-    def cardinal3(self, number):
+    def cardinalPos(self, number):
         if number < 10:
+            # Zero is handled elsewhere
             return swOnes[number]
 
         if number < 100:
             x, y = divmod(number, 10)
-            if y == 0:
-                return swTens[x]
+            words = [swTens[x]]
+            if y != 0:
+                words.append(swSeparator)
+                words.append(swOnes[y])
 
-            return swTens[x] + swSeperator + swOnes[y]
+            return " ".join(words)
 
-        x = int(log10(number))
-        y = number - pow(10, x)
-        print(number, x, y)
+        # number = 10 ** e
+        e = int(log10(number))
+        e_word = swBig[e]
+        while not e_word:
+            # Move down a power of 10 until an exponent word is found
+            e -= 1
+            e_word = swBig[e]
 
-        if y == 0:
-            return swBig[x]
+        pow_10 = pow(10, e)
 
-        return swBig[x] + " " + self.cardinal3(y)
+        # 12,500 -> (12, 500)
+        x, y = divmod(number, pow_10)
 
-    def cardinalPos(self, number):
-        x = number
-        res = ""
-        for b in swBig:
-            x, y = divmod(x, 1000)
-            if y == 0:
-                continue
-            yx = self.cardinal3(y) + b
-            if res == "":
-                res = yx
-            else:
-                res = yx + swSeperator
-        return res
+        words = [e_word]
 
-    def fractional(self, number, l):
-        if number == 5:
-            return "نیم"
-        x = self.cardinalPos(number)
-        ld3, lm3 = divmod(l, 3)
-        ltext = (farsiFrac[lm3] + " " + farsiFracBig[ld3]).strip()
-        return x + " " + ltext
+        if (x == 1) and (0 < y < 10):
+            # 101 -> mia na moja
+            words.append(swSeparator)
+            words.append(self.cardinalPos(x))
+        else:
+            # 100 -> mia moja
+            words.append(self.cardinalPos(x))
+            if y != 0:
+                if y < 10:
+                    # 201 -> mia mbili na moja
+                    words.append(swSeparator)
+
+                # 110 -> mia moja kumi
+                words.append(self.cardinalPos(y))
+
+        return " ".join(words)
+
+    def fractional(self, frac, precision):
+        frac_str = str(frac)
+
+        # Add zeros to match precision
+        frac_str = ("0" * (precision - len(frac_str))) + frac_str
+
+        words = []
+        for digit in frac_str:
+            words.append(swOnes[int(digit)])
+
+        return " ".join(words)
 
     def to_currency(self, value):
         return self.to_cardinal(value) + " shilingi"
 
     def to_ordinal(self, number):
-        r = self.to_cardinal(number)
-        raise NotImplementedError()
+        words = []
+        if 2 < number < 9:
+            words.append(swOrdinal)
+
+        if number == 1:
+            words.append("kwanza")
+        elif number == 2:
+            words.append("pili")
+        else:
+            words.append(self.to_cardinal(number))
+
+        return " ".join(words)
 
     def to_year(self, value):
         raise NotImplementedError()
@@ -146,26 +171,28 @@ class Num2Word_SW(object):
 
     def to_cardinal(self, number):
         if number < 0:
+            # Negative number?
             raise NotImplementedError()
 
         if number == 0:
-            return "sifuri"
+            return swOnes[0]
 
         x, y, l = self.float2tuple(number)
         if y == 0:
+            # No fractional part
             return self.cardinalPos(x)
 
-        if x == 0:
-            raise NotImplementedError()
-            # return self.fractional(y, l)
-
-        return self.cardinalPos(x) + swSeperator + self.fractional(y, l)
+        # x.y
+        words = [self.to_cardinal(x), swDecimalPoint, self.fractional(y, l)]
+        return " ".join(words)
 
 
 # -----------------------------------------------------------------------------
 
 
 class SWTestCase(unittest.TestCase):
+    """Test cases for lang_SW"""
+
     def test_cardinal(self):
         test_cardinal = {
             21: "ishirini na moja",
@@ -176,22 +203,28 @@ class SWTestCase(unittest.TestCase):
             76: "sabini na sita",
             87: "themanini na saba",
             98: "tisini na nane",
+            101: "mia na moja",
+            110: "mia moja kumi",
+            111: "mia moja kumi na moja",
             200: "mia mbili",
             249: "mia mbili arobaini na tisa",
             300: "mia tatu",
             400: "mia nne",
             800: "mia nane",
             928: "mia tisa ishirini na nane",
+            1_997: "elfu moja mia tisa tisini na saba",
             1_364: "elfu moja mia tatu sitini na nne",
             5_000: "elfu tano",
             8_723: "elfu nane mia saba ishirini na tatu",
             12_000: "elfu kumi na mbili",
             19_284: "elfu kumi na tisa mia mbili themanini na nne",
-            53_981: "elfu hamsini na tatu, mia tisa themanini na moja",
+            29_003: "elfu ishirini na tisa na tatu",
+            36_027: "elfu thelathini na sita ishirini na saba",
+            53_981: "elfu hamsini na tatu mia tisa themanini na moja",
             60_000: "elfu sitini",
             125_728: "laki moja elfu ishirini na tano mia saba ishirini na nane",
             400_000: "laki nne",
-            500_200: "laki tano na mia mbili",
+            500_200: "laki tano mia mbili",
             7_000_000: "milioni saba",
         }
 
@@ -199,7 +232,51 @@ class SWTestCase(unittest.TestCase):
 
         for num, expected_words in test_cardinal.items():
             actual_words = conv.to_cardinal(num)
-            self.assertEqual(actual_words, expected_words)
+            self.assertEqual(expected_words, actual_words)
+
+    def test_ordinal(self):
+        test_ordinal = {
+            1: "kwanza",
+            2: "pili",
+            3: "wa tatu",
+            4: "wa nne",
+            5: "wa tano",
+            6: "wa sita",
+            7: "wa saba",
+            8: "wa nane",
+            9: "tisa",
+            10: "kumi",
+            11: "kumi na moja",
+            12: "kumi na mbili",
+            13: "kumi na tatu",
+            14: "kumi na nne",
+            15: "kumi na tano",
+            16: "kumi na sita",
+            17: "kumi na saba",
+            18: "kumi na nane",
+            19: "kumi na tisa",
+            20: "ishirini",
+        }
+
+        conv = Num2Word_SW()
+
+        for num, expected_words in test_ordinal.items():
+            actual_words = conv.to_ordinal(num)
+            self.assertEqual(expected_words, actual_words)
+
+    def test_fractional(self):
+        test_fractional = {
+            0.00701: "sifuri nukta sifuri sifuri saba sifuri moja",
+            0.224: "sifuri nukta mbili mbili nne",
+            2.45: "mbili nukta nne tano",
+        }
+
+        conv = Num2Word_SW()
+
+        for num, expected_words in test_fractional.items():
+            actual_words = conv.to_cardinal(num)
+            print(num, expected_words, actual_words, sep=", ")
+            self.assertEqual(expected_words, actual_words)
 
 
 if __name__ == "__main__":
