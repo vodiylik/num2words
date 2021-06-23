@@ -16,10 +16,9 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
 # MA 02110-1301 USA
 
-import re
+import math
 import unittest
 from decimal import Decimal
-from math import floor, log10
 
 swOnes = [
     "sifuri",  # 0
@@ -102,7 +101,7 @@ class Num2Word_SW(object):
             return " ".join(words)
 
         # number = 10 ** e
-        e = int(log10(number))
+        e = int(math.log10(number))
         e_word = swBig[e]
         while not e_word:
             # Move down a power of 10 until an exponent word is found
@@ -182,13 +181,17 @@ class Num2Word_SW(object):
         if number == 0:
             return swOnes[0]
 
-        x, y, l = self.float2tuple(number)
+        x, y, precision = self.float2tuple(number)
         if y == 0:
             # No fractional part
             return self.cardinalPos(x)
 
         # x.y
-        words = [self.to_cardinal(x), swDecimalPoint, self.fractional(y, l)]
+        words = [
+            self.to_cardinal(x),
+            swDecimalPoint,
+            self.fractional(y, precision),
+        ]
         return " ".join(words)
 
 
@@ -217,20 +220,21 @@ class SWTestCase(unittest.TestCase):
             400: "mia nne",
             800: "mia nane",
             928: "mia tisa ishirini na nane",
-            1_997: "elfu moja mia tisa tisini na saba",
-            1_364: "elfu moja mia tatu sitini na nne",
-            5_000: "elfu tano",
-            8_723: "elfu nane mia saba ishirini na tatu",
-            12_000: "elfu kumi na mbili",
-            19_284: "elfu kumi na tisa mia mbili themanini na nne",
-            29_003: "elfu ishirini na tisa na tatu",
-            36_027: "elfu thelathini na sita ishirini na saba",
-            53_981: "elfu hamsini na tatu mia tisa themanini na moja",
-            60_000: "elfu sitini",
-            125_728: "laki moja elfu ishirini na tano mia saba ishirini na nane",
-            400_000: "laki nne",
-            500_200: "laki tano mia mbili",
-            7_000_000: "milioni saba",
+            1997: "elfu moja mia tisa tisini na saba",
+            1364: "elfu moja mia tatu sitini na nne",
+            5000: "elfu tano",
+            8723: "elfu nane mia saba ishirini na tatu",
+            12000: "elfu kumi na mbili",
+            19284: "elfu kumi na tisa mia mbili themanini na nne",
+            29003: "elfu ishirini na tisa na tatu",
+            36027: "elfu thelathini na sita ishirini na saba",
+            53981: "elfu hamsini na tatu mia tisa themanini na moja",
+            60000: "elfu sitini",
+            125728: "laki moja elfu ishirini na tano"
+            + "mia saba ishirini na nane",
+            400000: "laki nne",
+            500200: "laki tano mia mbili",
+            7000000: "milioni saba",
         }
 
         conv = Num2Word_SW()
