@@ -4,10 +4,7 @@ pythonPkgs.buildPythonPackage rec {
   pname = "num2words";
   version = "0.6.0";
 
-  src = fetchTarball {
-    url = "https://github.com/rhasspy/num2words/archive/refs/tags/v0.6.0.tar.gz";
-    sha256 = "1qnibxix5jxl94kyfvksa386hhvp4xl86961pjz6pybm0jz131l9";
-  };
+  src = ./.;
 
   propagatedBuildInputs = with pythonPkgs; [ docopt ];
 
